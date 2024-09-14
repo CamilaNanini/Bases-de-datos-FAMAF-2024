@@ -37,3 +37,55 @@ UPDATE customer
 SET premium_customer = 'T'
 WHERE customer_id IN (SELECT customer_id FROM TopCustomers);
 
+-- 5 Listar, ordenados por cantidad de películas (de mayor a menor), los distintos ratings de las 
+-- películas existentes (Hint: rating se refiere en este caso a la clasificación según edad: G, PG, R, etc)
+SELECT film.rating, COUNT(film.film_id) as countfilms 
+FROM film 
+GROUP BY film.rating 
+ORDER BY countfilms DESC 
+
+-- 6 ¿Cuáles fueron la primera y última fecha donde hubo pagos?
+SELECT MIN(payment_date) AS first_payment, MAX(payment_date) AS last_payment
+FROM payment ;
+
+-- 7 Calcule, por cada mes, el promedio de pagos 
+-- (Hint: vea la manera de extraer el nombre del mes de una fecha). 
+SELECT MONTHNAME(payment.payment_date) AS payment_day, AVG(payment.amount)
+FROM payment
+GROUP BY payment_day 
+ORDER BY payment_day DESC;  -- Feb antes que Agosto?
+
+-- 8 Listar los 10 distritos que tuvieron mayor cantidad de alquileres 
+-- (con la cantidad total de alquileres).
+SELECT address.district,COUNT(rental.rental_id) AS countrental  -- CORROBORAR
+FROM address INNER JOIN customer  
+ON address.address_id = customer.address_id
+INNER JOIN rental 
+ON customer.customer_id = rental.customer_id 
+GROUP BY address.district 
+ORDER BY countrental DESC 
+LIMIT 10;
+
+-- 9 Modifique la table `inventory_id` agregando una columna `stock` que sea un número entero y 
+-- representa la cantidad de copias de una misma película que tiene determinada tienda. El número por 
+-- defecto debería ser 5 copias.
+ALTER TABLE inventory ADD COLUMN stock INT DEFAULT '5'
+
+-- 10 Cree un trigger `update_stock` que, cada vez que se agregue un nuevo registro a la tabla rental, 
+-- haga un update en la tabla `inventory` restando una copia al stock de la película rentada 
+-- (Hint: revisar que el rental no tiene información directa sobre la tienda, sino sobre el cliente, 
+-- que está asociado a una tienda en particular).
+
+CREATE TRIGGER update_stock AFTER INSERT 
+ON rental FOR EACH ROW
+BEGIN
+	UPDATE inventory SET inventory.stock = inventory.stock - 1  WHERE inventory.inventory_id = NEW.inventory_id;
+END;
+
+
+
+
+
+
+
+
