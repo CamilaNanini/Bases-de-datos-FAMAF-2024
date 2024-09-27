@@ -82,10 +82,53 @@ BEGIN
 	UPDATE inventory SET inventory.stock = inventory.stock - 1  WHERE inventory.inventory_id = NEW.inventory_id;
 END;
 
+-- DROP TRIGGER update_stock
 
+-- 11 Cree una tabla `fines` que tenga dos campos: `rental_id` y `amount`. El primero es
+-- una clave foránea a la tabla rental y el segundo es un valor numérico con dos
+-- decimales.
+CREATE TABLE fines (
+	rental_id INTEGER NOT NULL,
+	amount NUMERIC(5,2), 
+	FOREIGN KEY (rental_id) REFERENCES rental(rental_id)
+);
 
+-- 12. Cree un procedimiento `check_date_and_fine` que revise la tabla `rental` y cree un
+-- registro en la tabla `fines` por cada `rental` cuya devolución (return_date) haya
+-- tardado más de 3 días (comparación con rental_date). El valor de la multa será el
+-- número de días de retraso multiplicado por 1.5.
+DELIMITER |
+CREATE PROCEDURE check_date_and_fine()
+	BEGIN
+		INSERT INTO fines(rental_id,amount) 
+		SELECT(rental.rental_id,DATEDIFF(rental.return_date,rental.rental_date)*1.5) 
+		FROM rental
+		WHERE DATEDIFF(rental.return_date,rental.rental_date) >=3;
+	END;
+|
+DELIMITER ;
 
+-- DROP PROCEDURE check_date_and_fine
+CALL check_date_and_fine()
 
+-- 13. Crear un rol `employee` que tenga acceso de inserción, eliminación y actualización a
+-- la tabla `rental`.
+CREATE ROLE employee
 
+GRANT INSERT,UPDATE,DELETE
+ON rental
+TO employee;
+-- 14. Revocar el acceso de eliminación a `employee` y crear un rol `administrator` que
+-- tenga todos los privilegios sobre la BD `sakila`.
+REVOKE DELETE 
+ON rental
+FROM employee;
 
+CREATE ROLE administrator
+
+GRANT SELECT,INSERT,UPDATE,DELETE
+ON
+TO administrator;
+-- 15. Crear dos roles de empleado. A uno asignarle los permisos de `employee` y al otro
+-- de `administrator`.
 
