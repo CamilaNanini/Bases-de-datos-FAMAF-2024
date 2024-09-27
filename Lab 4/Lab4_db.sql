@@ -126,9 +126,15 @@ FROM employee;
 
 CREATE ROLE administrator
 
-GRANT SELECT,INSERT,UPDATE,DELETE
-ON
+GRANT ALL
+ON sakila.*
 TO administrator;
 -- 15. Crear dos roles de empleado. A uno asignarle los permisos de `employee` y al otro
 -- de `administrator`.
+SHOW GRANTS FOR administrator
 
+CREATE ROLE employee1 
+GRANT employee TO employee1
+
+CREATE ROLE employee2 
+GRANT administrator TO employee2
