@@ -1,57 +1,82 @@
--- ------------------------ PARTE 1 -------------------------- --
--- Lista el nombre de la ciudad, nombre del país, región y forma de gobierno de las 10 ciudades más pobladas del mundo.
-SELECT ci.Name, co.Name , co.Region , co.GovernmentForm  FROM city AS ci
-INNER JOIN country AS co ON ci.CountryCode = co.Code 
-ORDER BY ci.Population DESC LIMIT 10;
--- Listar los 10 países con menor población del mundo, junto a sus ciudades capitales 
-SELECT country.Name, city.Name FROM country 
-LEFT JOIN city ON country.Capital = city.ID 
-ORDER BY country.Population ASC LIMIT 10;
--- Listar el nombre, continente y todos los lenguajes oficiales de cada país
-SELECT country.Name , country.Continent , countrylanguage.Language  FROM country
-RIGHT JOIN countrylanguage ON countrylanguage.CountryCode = country.Code 
--- Listar el nombre del país y nombre de capital, de los 20 países con mayor superficie del mundo.
-SELECT country.Name, city.Name FROM country 
-INNER JOIN city ON country.Capital = city.ID
-ORDER BY country.SurfaceArea DESC LIMIT 20;
--- Listar las ciudades junto a sus idiomas oficiales (ordenado por la población de la ciudad) y el porcentaje de hablantes del idioma.
-SELECT city.Name,countrylanguage.Language,countrylanguage.Percentage FROM city 
-LEFT JOIN countrylanguage ON countrylanguage.CountryCode = city.CountryCode 
-ORDER BY city.Population;
--- Listar los 10 países con mayor población y los 10 países con menor población (que tengan al menos 100 habitantes) en la misma consulta.
-(SELECT country.Name FROM country ORDER BY country.Population DESC LIMIT 10)
-UNION
-(SELECT country.Name FROM country WHERE country.Population > 100 ORDER BY country.Population ASC LIMIT 10);
--- Listar aquellos países cuyos lenguajes oficiales son el Inglés y el Francés
-(SELECT country.Name FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
-WHERE countrylanguage.Language = 'English' AND countrylanguage.IsOfficial ='T')
-INTERSECT 
-(SELECT country.Name FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
-WHERE countrylanguage.Language = 'French'AND countrylanguage.IsOfficial ='T')
--- Listar aquellos países que tengan hablantes del Inglés pero no del Español en su población.*/
-(SELECT country.Name FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
-WHERE countrylanguage.Language = 'English')
-EXCEPT
-(SELECT country.Name FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
-WHERE countrylanguage.Language != 'Spanish')
--- EXTRA : Para corroborar que lenguajes se usan en tal país
-SELECT country.Name,countrylanguage.`Language` FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
-WHERE country.Name LIKE '%Jap%'
--- ------------------------ PARTE 2 -------------------------- --
--- ¿Devuelven los mismos valores las siguientes consultas? ¿Por qué? 
+ use world;
 
-SELECT city.Name, country.Name
-FROM city
-LEFT JOIN country ON city.CountryCode = country.Code AND country.Name = 'Argentina';
+ CREATE TABLE city (
+     ID INT PRIMARY KEY,
+     Name VARCHAR(100),
+     CountryCode VARCHAR(50),
+     District VARCHAR(100),
+     Population INT
+ );
+ 
+ CREATE TABLE country (
+     Code VARCHAR(50) PRIMARY KEY,
+     Name VARCHAR(100),
+     Continent VARCHAR(50),
+     Region VARCHAR(50),
+     SurfaceArea INT,
+     IndepYear INT,
+     Population INT,
+     LifeExpectancy INT,
+     GNP INT,
+     GNPOld INT,
+     LocalName VARCHAR(100),
+     GovernmentForm VARCHAR(100),
+     HeadOfState VARCHAR(100),
+     Capital INT,
+     Code2 VARCHAR(50)
+ );
+ 
+ CREATE TABLE countrylanguage (
+     CountryCode VARCHAR(100),
+     Language VARCHAR(100),
+     IsOfficial VARCHAR(5),
+     Percentage NUMERIC(4,2),
+     PRIMARY KEY (CountryCode, Language)
+ );
 
-SELECT city.Name, country.Name
-FROM city
-INNER JOIN country ON city.CountryCode = country.Code
-WHERE country.Name = 'Argentina';
+ -- Y para descomprimir los datos hacer gunzip world-data.sql.gz
+ -- Para cargar los datos usar ejecutar script desde dbeaver o mysql -u usuario -p nombre_base_datos < /ruta/del/archivo.sql
 
--- Si, ambas consultas devolveran lo mismo (todas las ciudades de Arg)
+ CREATE TABLE continent(
+ 	NombreContinente VARCHAR(30),
+ 	Area BIGINT,
+ 	PorcentajeDeMasaTerrestre FLOAT,
+ 	CiudadMasPoblada int,
+ 	FOREIGN KEY (CiudadMasPoblada) REFERENCES city(ID) ON DELETE CASCADE,
+ 	PRIMARY KEY (NombreContinente)
+ );
 
--- ¿Y si en vez de INNER JOIN fuera un LEFT JOIN?
-/* En ese caso la segunda consulta seguiría devolviendo el mismo resultado,pero la primera consulta 
- * interpretaría que buscamos devolver todas las ciudades y dar el pais de aquellas ciudades 
- * que sean de Arg mientras que las otras quedan en NULL. */
+ -- Antes de insertar los datos a la nueva tabla hay que saber y agregar datos a la de city. Esto porque una referencia a la otra
+ SELECT ID FROM city ORDER BY ID DESC; -- Con esto sé la última ID
+ INSERT INTO city VALUES (4080,'McMurdo Station','NZIR','Antarctic',525); -- Agrego la data que faltaba
+
+ -- Ahora necesito el ID de las ciudades que se piden
+ SELECT * FROM city WHERE Name LIKE '%Istanbul%';
+ -- Cairo 608, McMurdo 4080, Mumbai 1024, Ciudad d Mex 2515,Sydney 130, São Paulo 206, Istanbul 3357
+ INSERT INTO continent VALUES ('Asia',44579000,29.5,1024);
+
+ -- Modificar la tabla "country" de manera que el campo "Continent" pase a ser una clave externa (o foreign key) a la tabla Continent.
+ ALTER TABLE country ADD CONSTRAINT fk_continent_country FOREIGN KEY (Continent) REFERENCES continent (NombreContinente) ON DELETE CASCADE;
+
+ -- CONSULTAS:
+ SELECT Name , Region FROM country ORDER BY Name ASC; 
+ SELECT Name , Population FROM city ORDER BY Population DESC LIMIT 10; 
+ SELECT Name , Region , SurfaceArea, GovernmentForm FROM country ORDER BY SurfaceArea ASC LIMIT 10; 
+ SELECT * FROM country WHERE IndepYear IS NULL; 
+-- Para la última necesito vincular el pais con su lenguaje
+
+-- Verificar que todas las filas de la tabla country tengan una referencia válida en countrylanguage
+ SELECT Code FROM country WHERE Code NOT IN (SELECT CountryCode FROM countrylanguage);
+
+-- Agregar las entradas faltantes en countrylanguage
+ INSERT INTO countrylanguage (CountryCode, Language, IsOfficial, Percentage) SELECT Code, 'Unknown', 'F', 0 
+ FROM country WHERE Code NOT IN (SELECT CountryCode FROM countrylanguage);
+
+-- Eliminar las filas sin correspondencia en country
+ DELETE FROM country WHERE Code NOT IN (SELECT CountryCode FROM countrylanguage);
+
+ ALTER TABLE country ADD CONSTRAINT fk_continent_language FOREIGN KEY (Code) REFERENCES countrylanguage (CountryCode) ON DELETE CASCADE;
+
+ SELECT Language , Percentage FROM countrylanguage WHERE IsOfficial = 'T';
+
+

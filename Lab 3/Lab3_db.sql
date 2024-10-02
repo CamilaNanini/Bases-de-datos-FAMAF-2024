@@ -1,119 +1,57 @@
--- 1 Listar el nombre de la ciudad y el nombre del país de todas las ciudades que pertenezcan a países con una población menor a 10000 habitantes.
-SELECT city.Name, country.Name 
-FROM city INNER JOIN country
-ON city.CountryCode = country.Code 
-WHERE country.Code IN (
-		SELECT country.Code 
-		FROM country
-		WHERE country.Population < 10000
-);
+-- ------------------------ PARTE 1 -------------------------- --
+-- Lista el nombre de la ciudad, nombre del país, región y forma de gobierno de las 10 ciudades más pobladas del mundo.
+SELECT ci.Name, co.Name , co.Region , co.GovernmentForm  FROM city AS ci
+INNER JOIN country AS co ON ci.CountryCode = co.Code 
+ORDER BY ci.Population DESC LIMIT 10;
+-- Listar los 10 países con menor población del mundo, junto a sus ciudades capitales 
+SELECT country.Name, city.Name FROM country 
+LEFT JOIN city ON country.Capital = city.ID 
+ORDER BY country.Population ASC LIMIT 10;
+-- Listar el nombre, continente y todos los lenguajes oficiales de cada país
+SELECT country.Name , country.Continent , countrylanguage.Language  FROM country
+RIGHT JOIN countrylanguage ON countrylanguage.CountryCode = country.Code 
+-- Listar el nombre del país y nombre de capital, de los 20 países con mayor superficie del mundo.
+SELECT country.Name, city.Name FROM country 
+INNER JOIN city ON country.Capital = city.ID
+ORDER BY country.SurfaceArea DESC LIMIT 20;
+-- Listar las ciudades junto a sus idiomas oficiales (ordenado por la población de la ciudad) y el porcentaje de hablantes del idioma.
+SELECT city.Name,countrylanguage.Language,countrylanguage.Percentage FROM city 
+LEFT JOIN countrylanguage ON countrylanguage.CountryCode = city.CountryCode 
+ORDER BY city.Population;
+-- Listar los 10 países con mayor población y los 10 países con menor población (que tengan al menos 100 habitantes) en la misma consulta.
+(SELECT country.Name FROM country ORDER BY country.Population DESC LIMIT 10)
+UNION
+(SELECT country.Name FROM country WHERE country.Population > 100 ORDER BY country.Population ASC LIMIT 10);
+-- Listar aquellos países cuyos lenguajes oficiales son el Inglés y el Francés
+(SELECT country.Name FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
+WHERE countrylanguage.Language = 'English' AND countrylanguage.IsOfficial ='T')
+INTERSECT 
+(SELECT country.Name FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
+WHERE countrylanguage.Language = 'French'AND countrylanguage.IsOfficial ='T')
+-- Listar aquellos países que tengan hablantes del Inglés pero no del Español en su población.*/
+(SELECT country.Name FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
+WHERE countrylanguage.Language = 'English')
+EXCEPT
+(SELECT country.Name FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
+WHERE countrylanguage.Language != 'Spanish')
+-- EXTRA : Para corroborar que lenguajes se usan en tal país
+SELECT country.Name,countrylanguage.`Language` FROM country LEFT JOIN countrylanguage ON country.Code = countrylanguage.CountryCode
+WHERE country.Name LIKE '%Jap%'
+-- ------------------------ PARTE 2 -------------------------- --
+-- ¿Devuelven los mismos valores las siguientes consultas? ¿Por qué? 
 
--- 2 Listar todas aquellas ciudades cuya población sea mayor que la población promedio entre todas las ciudades.
-SELECT city.Name 
-FROM city 
-WHERE city.Population > ALL(
-			SELECT AVG(city.Population)
-			FROM city
-);
+SELECT city.Name, country.Name
+FROM city
+LEFT JOIN country ON city.CountryCode = country.Code AND country.Name = 'Argentina';
 
--- 3 Listar todas aquellas ciudades no asiáticas cuya población sea igual o mayor a la población total de algún país de Asia.
-SELECT city.Name
-FROM city INNER JOIN country
-ON city.CountryCode = country.Code 
-WHERE country.Continent != 'Asia' AND city.Population >= SOME(
-				SELECT city.Population 
-				FROM city INNER JOIN country
-				ON city.CountryCode = country.Code
-				WHERE country.Continent = 'Asia'
-);
+SELECT city.Name, country.Name
+FROM city
+INNER JOIN country ON city.CountryCode = country.Code
+WHERE country.Name = 'Argentina';
 
--- 4 Listar aquellos países junto a sus idiomas no oficiales, que superen en porcentaje de hablantes a cada uno de los idiomas oficiales del país.
-SELECT country.Name , countrylanguage.Language 
-FROM country INNER JOIN countrylanguage
-ON country.Code = countrylanguage.CountryCode AND countrylanguage.IsOfficial != 'T'
-WHERE countrylanguage.Percentage > ALL (
-		SELECT countrylanguage.Percentage 
-        FROM countrylanguage
-        WHERE countrylanguage.IsOfficial = 'T' AND country.Code = countrylanguage.CountryCode
-);
--- 5 Listar (sin duplicados) aquellas regiones que tengan países con una superficie menor a 1000 km2 y exista (en el país) al menos una ciudad con más de 100000 habitantes. 
--- Con subquery
-SELECT DISTINCT country.Region 
-FROM country 
-WHERE country.SurfaceArea < 1000 AND 100000 < SOME (
-				SELECT city.Population
-				FROM city 
-				WHERE city.CountryCode = country.Code 
-);
--- Sin subquery
-SELECT DISTINCT country.Region 
-FROM country INNER JOIN city 
-ON city.CountryCode = country.Code 
-WHERE country.SurfaceArea < 1000 AND 100000 < city.Population
+-- Si, ambas consultas devolveran lo mismo (todas las ciudades de Arg)
 
--- 6 Listar el nombre de cada país con la cantidad de habitantes de su ciudad más poblada. 
--- (Hint: Hay dos maneras de llegar al mismo resultado. Usando consultas escalares o usando agrupaciones, encontrar ambas).
--- Consulta escalar
-SELECT DISTINCT country.name, (SELECT MAX(city.population)
-        FROM city
-        WHERE city.countrycode = country.code)
-FROM country;
-
--- Consulta agrupada
-SELECT country.Name, max(city.Population)
-FROM country INNER JOIN city 
-ON country.Code = city.CountryCode
-GROUP BY country.Code ;
-
--- 7 Listar aquellos países y sus lenguajes no oficiales cuyo porcentaje de hablantes sea mayor al promedio de hablantes de los lenguajes oficiales. 
-SELECT country.Name , countrylanguage.Language
-FROM country INNER JOIN countrylanguage
-ON country.Code = countrylanguage.CountryCode AND countrylanguage.IsOfficial!='T'
-WHERE countrylanguage.Percentage > ALL( 
-			SELECT AVG(countrylanguage.Percentage)
-			FROM countrylanguage
-			WHERE countrylanguage.IsOfficial = 'T' AND country.Code = countrylanguage.CountryCode 
-)
--- 8 Listar la cantidad de habitantes por continente ordenado en forma descendente.
-SELECT country.Continent , SUM(country.Population) as cpopulation
-FROM country 
-GROUP BY country.Continent
-ORDER BY cpopulation DESC;
-
--- 9 Listar el promedio de esperanza de vida (LifeExpectancy) por continente con una esperanza de vida entre 40 y 70 años.
-SELECT country.Continent , AVG(country.LifeExpectancy) AS clifeexpextanxy
-FROM country 
-GROUP BY country.Continent
-HAVING clifeexpextanxy>40 AND clifeexpextanxy<70
-ORDER BY clifeexpextanxy DESC 
-
--- Listar la cantidad máxima, mínima, promedio y suma de habitantes por continente.
-SELECT  country.continent, MAX(country.Population), MIN(country.Population), AVG(country.Population), SUM(country.Population)
-FROM country
-GROUP BY country.Continent;
-
--- Modificar la consulta 6 para que además devuelva el nombre de la ciudad más poblada. 
--- ¿Podría lograrse con agrupaciones? ¿y con una subquery escalar?
-SELECT country.Name,city.Name,city.Population
-FROM country INNER JOIN city 
-ON country.Code = city.CountryCode
-WHERE city.Population = ALL(
-		SELECT MAX(city.Population)
-		FROM city 
-		WHERE city.CountryCode = country.Code
-		);
-		
--- SELECT c.Name AS CountryName, ci.Name AS CityName, ci.Population
--- FROM country c
--- INNER JOIN city ci
---     ON c.Code = ci.CountryCode
--- INNER JOIN (
---     SELECT CountryCode, MAX(Population) AS MaxPopulation
---     FROM city
---     GROUP BY CountryCode
--- ) max_pop
---     ON ci.CountryCode = max_pop.CountryCode
---     AND ci.Population = max_pop.MaxPopulation;
-
-
-
+-- ¿Y si en vez de INNER JOIN fuera un LEFT JOIN?
+/* En ese caso la segunda consulta seguiría devolviendo el mismo resultado,pero la primera consulta 
+ * interpretaría que buscamos devolver todas las ciudades y dar el pais de aquellas ciudades 
+ * que sean de Arg mientras que las otras quedan en NULL. */
