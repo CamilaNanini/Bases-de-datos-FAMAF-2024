@@ -259,3 +259,35 @@ db.comments.aggregate([
 ])
 
 // ------------------ Ej12 --------------------
+//a
+db.restaurants.findOne()
+db.restaurants.aggregate([
+    {
+        $unwind: "$grades"
+    },
+    {
+        $group: {
+            _id: "$restaurant_id",
+            name: {$first: "$name"},
+            max: {$max:"$grades.score"},
+            min: {$min:"$grades.score"},
+            total_score: {$sum: "$grades.score"}
+        }
+    },
+    {
+        $project: {
+            _id:1,
+            name:1,
+            max:1,
+            min:1,
+            total_score:1
+        }
+    }
+])
+
+//b
+
+// ------------------ Ej13 --------------------
+
+
+// ------------------ Ej14 --------------------
