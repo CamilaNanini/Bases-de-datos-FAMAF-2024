@@ -51,7 +51,7 @@ db.movies.aggregate([
 
 // ------------------ Ej4 --------------------
 db.movies.find(
-    {year:{$gte:1950 , $lte:1951}}
+    {year:{$gte:1950 , $lte:1959}}
 ).count()
 
 db.movies.aggregate([
@@ -66,8 +66,6 @@ db.movies.aggregate([
 ])
 
 // ------------------ Ej5 --------------------
-// Listar los 10 géneros con mayor cantidad de películas (tener en cuenta que las películas pueden tener más 
-// de un género). Devolver el género y la cantidad de películas. Hint: unwind puede ser de utilidad
 db.movies.aggregate([
     { 
         $unwind: '$genres',
@@ -84,8 +82,180 @@ db.movies.aggregate([
 ])
 
 // ------------------ Ej6 --------------------
-// Top 10 de usuarios con mayor cantidad de comentarios, mostrando Nombre, Email y Cantidad de Comentarios.
+db.comments.aggregate(
+    {
+        $group: {
+        _id: { name: "$name",email: "$email" },
+        count: {$sum: 1}
+        }
+    },
+    {
+        $project: {
+            _id : 0,
+            name: "$_id.name",
+            email: "$_id.email",
+            count: 1,
+        }
+    },
+    {
+        $sort: {
+            count: -1
+        }
+    },
+    {
+        $limit: 10
+    }
+)
 
 // ------------------ Ej7 --------------------
-// Ratings de IMDB promedio, mínimo y máximo por año de las películas estrenadas en los años 80 (desde 1980 
-// hasta 1989), ordenados de mayor a menor por promedio del año.
+db.movies.aggregate(
+    {
+        $match: {
+            year: { $gte: 1980, $lte: 1989 }
+        }
+    },
+    {
+        $group: {
+            _id: "$year",
+            avg: { $avg: "$imdb.rating" },
+            min: { $min: "$imdb.rating" },
+            max: { $max: "$imdb.rating" }
+        }
+    },
+    {
+        $sort: {
+            avg: -1
+        }
+    }
+)
+
+// ------------------ Ej8 --------------------
+db.movies.aggregate([
+    {
+        $lookup: {
+            from: "comments",
+            localField: "_id",
+            foreignField: "movie_id",
+            as: "movieComments"
+        }
+    },
+    {
+        $project: {
+            _id: 0,
+            title: 1,
+            year: 1,
+            commentsCount: { $size: "$movieComments" } 
+        }
+    },
+    {
+        $sort: { commentsCount: -1 }
+    },
+    {
+        $limit: 10 
+    }
+])
+
+// ------------------ Ej9 --------------------
+db.createView(
+    "fiveGenders",
+    "movies",
+    [
+        {
+            $lookup: {
+                from: 'comments',
+                localField: '_id',
+                foreignField: 'movie_id',
+                as: 'comments'
+            }
+        },
+        {
+            $unwind: '$genres'
+        },
+        {
+            $group: {
+                _id: '$genres',
+                comment_count: { $sum: { $size: '$comments' } }
+            }
+        },
+        {
+            $sort: { comment_count: -1 }
+        },
+        {
+            $limit: 5
+        },
+        {
+            $project: { _id: 0, genre: '$_id', comment_count: 1 }
+        }
+    ]
+)
+
+db.fiveGenders.find()
+db.fiveGenders.drop()
+
+// ------------------ Ej10 --------------------
+db.movies.aggregate([
+    {
+        $match: {
+            directors: "Jules Bass" 
+        }
+    },
+    {
+        $unwind: "$cast" 
+    },
+    {
+        $group: {
+            _id: "$cast",
+            movies: { $addToSet: { title: "$title", year: "$year" } }, 
+            movieCount: { $sum: 1 }
+        }
+    },
+    {
+        $match: { movieCount: { $gte: 2 } }
+    },
+    {
+        $project: {
+            actorName: "$_id",
+            movies: 1
+        }
+    }
+])
+
+// ------------------ Ej11 --------------------
+db.comments.aggregate([
+    {
+        $lookup: {
+            from: "movies",
+            localField: "movie_id",
+            foreignField: "_id",
+            let: { comment_date: "$date" }, 
+            pipeline:[
+                { $match: { $expr: { $eq: [{ $month: "$$comment_date" }, { $month: "$released" }]}}}, 
+            ],
+            as: "movieDetails"
+        }
+    },
+    {
+        $unwind: "$movieDetails" 
+    },
+    {
+        $project: {
+            name: 1,
+            email: 1,
+            commentDate: "$createdAt",
+            movieTitle: "$movieDetails.title",
+            releaseDate: "$movieDetails.releaseDate"
+        }
+    },
+    {
+        $project: {
+            name: 1,
+            email: 1,
+            date: 1,
+            movie_date: '$movieDetails.released',
+            movie_title: '$movieDetails.title',
+            _id: 0
+        } 
+    }
+])
+
+// ------------------ Ej12 --------------------
