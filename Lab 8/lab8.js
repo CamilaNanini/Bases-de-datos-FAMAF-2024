@@ -229,7 +229,12 @@ db.comments.aggregate([
             foreignField: "_id",
             let: { comment_date: "$date" }, 
             pipeline:[
-                { $match: { $expr: { $eq: [{ $month: "$$comment_date" }, { $month: "$released" }]}}}, 
+                { $match: { $expr: {
+                    $and:{ 
+                    $eq: [{ $month: "$$comment_date" }, { $month: "$released" }],
+                    $eq: [{ $year: "$$comment_date" }, { $year: "$released" }]
+                    }
+                }}}, 
             ],
             as: "movieDetails"
         }
@@ -366,7 +371,7 @@ db.restaurants.updateMany(
                             then: "C"
                         },
                     ],
-                    default: "Not Graded",
+                    default: "",
                 }
             }
         }
