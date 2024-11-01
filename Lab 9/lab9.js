@@ -8,7 +8,7 @@ db.runCommand({
         properties: {
         name: {
             bsonType: "string",
-            maxItems: 30,
+            maxLength: 30,
             description: "El name debe ser un string de hasta 30 caracteres"
         },
         email1: {
@@ -18,7 +18,7 @@ db.runCommand({
         },
         password: {
             bsonType: "string",
-            maxItems: 50,
+            maxLength: 50,
             description: "El password debe ser un string de hasta 50 caracteres"
         },
         },
@@ -80,5 +80,58 @@ db.runCommand({
     }
     },
     validationLevel: "moderate",
-    validationAction: "warn"
+    validationAction: "error"
+});
+
+// ----------------- Ej4 ----------------- 
+db.runCommand({
+    collMod: "movies",
+    validator: {
+        $jsonSchema: {
+            bsonType: "object",
+            required: ["title","year"],
+            properties: {
+                title: {
+                    bsonType: "string",
+                    description: "El title debe ser un string"
+                },
+                year: {
+                    bsonType: "int",
+                    minimum: 1900,
+                    maximum: 3000,
+                    description: "El year debe ser un integer"
+                },
+                cast: {
+                    bsonType: "array",
+                    uniqueItems: true,
+                    items: {
+                        bsonType: "string"
+                    }
+                },
+                directors: {
+                    bsonType: "array",
+                    uniqueItems: true,
+                    items: {
+                        bsonType: "string"
+                    }
+                },
+                countries: {
+                    bsonType: "array",
+                    uniqueItems: true,
+                    items: {
+                        bsonType: "string"
+                    }
+                },
+                genres: {
+                    bsonType: "array",
+                    uniqueItems: true,
+                    items: {
+                        bsonType: "string"
+                    }
+                },
+            }
+        },
+    },  
+    validationLevel: "moderate",
+    validationAction: "error"
 });
