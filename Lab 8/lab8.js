@@ -286,8 +286,96 @@ db.restaurants.aggregate([
 ])
 
 //b
+db.restaurants.aggregate([
+    {
+        $project: {
+            _id:0,
+            restaurant_id:1,
+            name:1,
+            max: {$max:"$grades.score"},
+            min: {$min:"$grades.score"},
+            total_score: {$sum: "$grades.score"}
+        }
+    }
+])
+
+//c
+db.restaurants.aggregate([
+    {
+        $project: {
+            _id: 0,
+            restaurant_id: 1,
+            name: 1,
+            max: { $max: "$grades.score" },
+            min: { $min: "$grades.score" },
+            total_score: {
+                $reduce: {
+                    input: "$grades",
+                    initialValue: { sum: 0 },
+                    in: {
+                        sum: { $add: ["$$value.sum", "$$this.score"] }
+                    }
+                }
+            }
+        }
+    }
+])
+
+//d
+db.restaurants.find({},{
+    _id: 0,
+            restaurant_id: 1,
+            name: 1,
+            max: { $max: "$grades.score" },
+            min: { $min: "$grades.score" },
+            total_score: {
+                $reduce: {
+                    input: "$grades",
+                    initialValue: { sum: 0 },
+                    in: {
+                        sum: { $add: ["$$value.sum", "$$this.score"] }
+                    }
+                }
+            }
+})
 
 // ------------------ Ej13 --------------------
+db.restaurants.updateMany(
+    {},
+    [{
+        $addFields: {
+            average_score: {
+                $avg: "$grades.score"
+            }
+        }
+    },
+    {
+        $addFields: {
+            grade: {
+                $switch: {
+                    branches: [
+                        {case:{ $and : [ { $gte : [ "$average_score",0 ] },
+                                { $lte : [ "$average_score",13 ] } ] },
+                            then: "A"
+                        },
+                        {case:{ $and : [ { $gte : [ "$average_score",14 ] },
+                                { $lte : [ "$average_score",27 ] } ] },
+                            then: "B"
+                        },
+                        {case:{ $gte : [ 28, "$average_score" ] },
+                            then: "C"
+                        },
+                    ],
+                    default: "Not Graded",
+                }
+            }
+        }
+    }
+    ]
+)  
 
-
-// ------------------ Ej14 --------------------
+//Borrar un campo
+db.restaurants.updateMany(
+    {},
+    { $unset: { average_score: "" } }
+);
