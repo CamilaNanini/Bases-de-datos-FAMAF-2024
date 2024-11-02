@@ -135,3 +135,34 @@ db.runCommand({
     validationLevel: "moderate",
     validationAction: "error"
 });
+
+// ----------------- Ej5 ----------------- 
+db.createCollection( 
+    "userProfiles", 
+    {   validator: {
+            $jsonSchema: {
+                bsonType: "object",
+                required: ["user_id","language"],
+                properties: {
+                    user_id: {
+                        bsonType: "objectId",
+                        description: "El user_id debe ser un objectId"
+                    },
+                    language: {
+                        bsonType: "array",
+                        enum: [ "English", "Spanish", "Portuguese" ],
+                    },
+                    favorite_genres: {
+                        bsonType: "array",
+                        uniqueItems: true,
+                        items: {
+                            bsonType: "string"
+                        }
+                    }
+                }
+            }
+        }, 
+        validationLevel: "strict", 
+        validationAction: "error" ,
+    }
+)
