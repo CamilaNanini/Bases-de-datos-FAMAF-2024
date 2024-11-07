@@ -51,3 +51,39 @@ db.restaurants.countDocuments(
     }
 )
 // ---------------- EJ 4 -----------
+db.restaurants.aggregate([
+  {
+      $unwind: "$grades"
+  },
+  {
+      $match: {
+          "grades.date": {
+              $gte : new Date ("2013-07-01T00:00:00Z"),
+              $lt : new Date ("2013-12-31T23:59:59Z")
+          }
+      }
+  },
+  {
+      $group: {
+      _id: {
+          cuisine: "$cuisine",  
+          grade: "$grades.grade"
+      },
+      distinctCount: { $sum: 1 }
+
+      }
+  },
+  {
+      $sort: {
+          "_id.cuisine": 1,
+          "_id.grade": 1
+      }
+  },
+  {
+      $project: {
+          _id: 1, 
+          distinctCount: 1  
+      }
+  }
+]);
+// ---------------- EJ 5 ----------------
