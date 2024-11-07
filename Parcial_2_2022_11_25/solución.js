@@ -87,3 +87,47 @@ db.restaurants.aggregate([
   }
 ]);
 // ---------------- EJ 5 ----------------
+db.restaurants.aggregate([
+    {
+        $unwind: "$grades"
+    },
+    {
+        $addFields: {
+            gradeInNumbers: {
+                $switch: {
+                    branches: [
+                        {case: {$eq:["$grades.grade","A"]},then: 5},
+                        {case: {$eq:["$grades.grade","B"]},then: 4},
+                        {case: {$eq:["$grades.grade","C"]},then: 3},
+                        {case: {$eq:["$grades.grade","D"]},then: 2},
+                    ],
+                    default: 1,
+                }
+            }
+        }
+    },
+    {
+        $group: {
+            _id: { cuisine: "$cuisine" },
+            maxGrade: { $max: "$gradeInNumbers" },
+            minGrade: { $min: "$gradeInNumbers" },
+            avgGrade: { $avg: "$gradeInNumbers" }
+        }
+    },
+    {
+        $sort:{
+            avgGrade:-1,
+        }
+    },
+    {
+        $project: {
+            _id:0,
+            cuisine: "$_id.cuisine", 
+            maxGrade:1,
+            minGrade:1,
+            avgGrade:1
+        }
+    }
+  ]);
+
+  
